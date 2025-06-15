@@ -67,6 +67,9 @@ class AuthService: ObservableObject {
         BusinessService.shared.userBusinesses = []
         BusinessService.shared.allBusinesses = []
         BusinessService.shared.hasActiveBusiness = false
+        
+        // Menü servisini de sıfırla
+        MenuService.shared.clearData()
     }
     
     func handleUnauthorized() {
