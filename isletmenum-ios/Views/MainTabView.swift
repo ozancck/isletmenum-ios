@@ -303,44 +303,168 @@ struct BusinessCardView: View {
 
 struct BusinessView: View {
     @StateObject private var businessService = BusinessService.shared
+    @StateObject private var menuService = MenuService.shared
+    @State private var selectedBusiness: Business?
     @State private var showCreateBusiness = false
+    @State private var showAddCategory = false
+    @State private var isLoadingCategories = false
     
     var body: some View {
         NavigationView {
-            VStack {
-                if businessService.userBusinesses.isEmpty {
-                    // Boş durum
-                    VStack(spacing: 20) {
-                        Image(systemName: "building.2")
-                            .font(.system(size: 60))
-                            .foregroundColor(.gray)
-                        
-                        Text("Henüz İşletmeniz Yok")
-                            .font(.title2)
-                            .fontWeight(.semibold)
-                        
-                        Text("İlk işletmenizi oluşturun ve müşterilerinize ulaşın")
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                        
-                        Button("İşletme Oluştur") {
-                            showCreateBusiness = true
+            VStack(spacing: 0) {
+                // İşletme Seçici (En Üst)
+                if !businessService.allBusinesses.isEmpty {
+                    VStack(spacing: 12) {
+                        HStack {
+                            Text("İşletme Seçin")
+                                .font(.headline)
+                                .foregroundColor(.primary)
+                            Spacer()
                         }
-                        .buttonStyle(.borderedProminent)
+                        
+                        Menu {
+                            Button("Seçiniz...") {
+                                selectedBusiness = nil
+                            }
+                            
+                            ForEach(businessService.allBusinesses, id: \.id) { business in
+                                Button(business.name) {
+                                    selectedBusiness = business
+                                }
+                            }
+                        } label: {
+                            HStack {
+                                Text(selectedBusiness?.name ?? "Seçiniz...")
+                                    .foregroundColor(selectedBusiness != nil ? .primary : .secondary)
+                                Spacer()
+                                Image(systemName: "chevron.up.chevron.down")
+                                    .foregroundColor(.gray)
+                            }
+                            .padding()
+                            .background(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .fill(Color.gray.opacity(0.1))
+                            )
+                        }
                     }
-                    .padding()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(Color(UIColor.systemBackground))
+                }
+                
+                Divider()
+                
+                // Menü İçeriği
+                if let business = selectedBusiness {
+                    // İşletme seçilmiş - Kategorileri göster
+                    if isLoadingCategories {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .scaleEffect(1.2)
+                            Text("Kategoriler yükleniyor...")
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if menuService.categories.isEmpty {
+                        // Boş durum - Kategori yok
+                        VStack(spacing: 20) {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.system(size: 60))
+                                .foregroundColor(.gray)
+                            
+                            Text("Henüz Kategori Yok")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            Text("\(business.name) için ilk kategoriyi oluşturun")
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            
+                            Button("Kategori Ekle") {
+                                showAddCategory = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        // Kategori Listesi - iOS Settings tarzı
+                        List {
+                            Section {
+                                ForEach(menuService.categories) { category in
+                                    NavigationLink(destination: CategoryDetailView(category: category, menuId: business.id ?? 1)) {
+                                        CategoryRowView(category: category)
+                                    }
+                                }
+                            } header: {
+                                Text("Menü Kategorileri")
+                            } footer: {
+                                Text("Kategorilere tıklayarak ürünleri görüntüleyin ve düzenleyin.")
+                            }
+                        }
+                        .listStyle(InsetGroupedListStyle())
+                    }
                 } else {
-                    // İşletme listesi
-                    List(businessService.userBusinesses, id: \.id) { business in
-                        BusinessRowView(business: business)
+                    // İşletme seçilmemiş
+                    if businessService.allBusinesses.isEmpty {
+                        // İşletme yok
+                        VStack(spacing: 20) {
+                            Image(systemName: "building.2")
+                                .font(.system(size: 60))
+                                .foregroundColor(.gray)
+                            
+                            Text("Henüz İşletmeniz Yok")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            Text("İlk işletmenizi oluşturun ve menü yönetimine başlayın")
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            
+                            Button("İşletme Oluştur") {
+                                showCreateBusiness = true
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        // İşletme seç mesajı
+                        VStack(spacing: 20) {
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 60))
+                                .foregroundColor(.blue)
+                            
+                            Text("İşletme Seçin")
+                                .font(.title2)
+                                .fontWeight(.semibold)
+                            
+                            Text("Menü yönetimi için yukarıdan bir işletme seçin")
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
             }
-            .navigationTitle("İşletmelerim")
+            .navigationTitle("Menü Yönetimi")
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Ekle") {
-                        showCreateBusiness = true
+                    HStack {
+                        if selectedBusiness != nil {
+                            Button(action: {
+                                showAddCategory = true
+                            }) {
+                                Image(systemName: "folder.badge.plus")
+                            }
+                        }
+                        
+                        Button(action: {
+                            showCreateBusiness = true
+                        }) {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
             }
@@ -348,15 +472,95 @@ struct BusinessView: View {
         .sheet(isPresented: $showCreateBusiness) {
             CreateBusinessView()
         }
-        .onAppear {
-            Task {
-                do {
-                    _ = try await businessService.getUserBusinesses()
-                } catch {
-                    print("Hata: \(error)")
+        .sheet(isPresented: $showAddCategory) {
+            if let business = selectedBusiness {
+                AddCategoryView(menuId: business.id ?? 1) {
+                    Task {
+                        await loadCategories()
+                    }
                 }
             }
         }
+        .onChange(of: selectedBusiness) { newBusiness in
+            if let business = newBusiness {
+                Task {
+                    await loadCategories(for: business)
+                }
+            } else {
+                menuService.clearData()
+            }
+        }
+        .onAppear {
+            Task {
+                await loadUserBusinesses()
+            }
+        }
+    }
+    
+    private func loadUserBusinesses() async {
+        do {
+            _ = try await businessService.getAllBusinesses() // allBusinesses kullan
+            // İlk işletmeyi otomatik seç
+            if let firstBusiness = businessService.allBusinesses.first {
+                selectedBusiness = firstBusiness
+            }
+        } catch {
+            print("Hata: \(error)")
+        }
+    }
+    
+    private func loadCategories() async {
+        guard let business = selectedBusiness else { return }
+        await loadCategories(for: business)
+    }
+    
+    private func loadCategories(for business: Business) async {
+        isLoadingCategories = true
+        do {
+            _ = try await menuService.getCategories(menuId: business.id ?? 1)
+        } catch {
+            print("Hata: \(error)")
+        }
+        isLoadingCategories = false
+    }
+}
+
+// MARK: - Category Row View (iOS Settings tarzı)
+struct CategoryRowView: View {
+    let category: MenuCategory
+    @StateObject private var menuService = MenuService.shared
+    
+    private var itemCount: Int {
+        menuService.getItemsForCategory(category.id).count
+    }
+    
+    var body: some View {
+        HStack {
+            // Kategori ikonu
+            Image(systemName: "folder.fill")
+                .font(.title2)
+                .foregroundColor(.blue)
+                .frame(width: 30)
+            
+            // Kategori bilgileri
+            VStack(alignment: .leading, spacing: 2) {
+                Text(category.name)
+                    .font(.body)
+                    .foregroundColor(.primary)
+                
+                Text("\(itemCount) ürün")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Spacer()
+            
+            // iOS style disclosure indicator
+            Image(systemName: "chevron.right")
+                .font(.caption)
+                .foregroundColor(.gray)
+        }
+        .padding(.vertical, 2)
     }
 }
 
