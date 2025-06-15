@@ -33,7 +33,15 @@ class AuthService: ObservableObject {
         let loginRequest = LoginRequest(email: email, password: password)
         request.httpBody = try JSONEncoder().encode(loginRequest)
         
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        // HTTP response kodunu kontrol et
+        if let httpResponse = response as? HTTPURLResponse {
+            if httpResponse.statusCode == 401 {
+                throw AuthError.unauthorized
+            }
+        }
+        
         let loginResponse = try JSONDecoder().decode(LoginResponse.self, from: data)
         
         // Başarılı login sonrası token ve user bilgilerini kaydet
@@ -61,11 +69,24 @@ class AuthService: ObservableObject {
         BusinessService.shared.hasActiveBusiness = false
     }
     
+    func handleUnauthorized() {
+        DispatchQueue.main.async {
+            self.logout()
+        }
+    }
+    
     private func loadToken() {
         if let savedToken = UserDefaults.standard.string(forKey: "auth_token") {
             token = savedToken
+            // Token geçerliliğini kontrol etmeden önce authenticated olarak işaretle
+            // Eğer token geçersizse API çağrıları 401 döndürür ve otomatik logout olur
             isAuthenticated = true
-            // TODO: Token geçerliliğini kontrol et
         }
     }
+}
+
+enum AuthError: Error {
+    case unauthorized
+    case invalidCredentials
+    case networkError
 }

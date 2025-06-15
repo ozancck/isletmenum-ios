@@ -10,10 +10,19 @@ import SwiftUI
 struct MainTabView: View {
     @StateObject private var businessService = BusinessService.shared
     @State private var showCreateBusiness = false
+    @State private var hasCheckedBusinesses = false
     
     var body: some View {
         Group {
-            if businessService.hasActiveBusiness {
+            if !hasCheckedBusinesses {
+                // Yükleme ekranı
+                VStack {
+                    ProgressView()
+                        .scaleEffect(1.5)
+                    Text("Yükleniyor...")
+                        .padding(.top)
+                }
+            } else {
                 TabView {
             HomeView()
                 .tabItem {
@@ -40,15 +49,28 @@ struct MainTabView: View {
                 }
                 }
                 .accentColor(.blue)
-            } else {
-                CreateBusinessView()
+                .sheet(isPresented: $showCreateBusiness) {
+                    CreateBusinessView()
+                }
             }
         }
         .onAppear {
-            Task {
-                await businessService.checkUserHasBusiness()
+            if !hasCheckedBusinesses {
+                Task {
+                    await checkUserBusinesses()
+                }
             }
         }
+    }
+    
+    private func checkUserBusinesses() async {
+        do {
+            _ = try await businessService.getUserBusinesses()
+        } catch {
+            print("Hata: \(error)")
+            // Hata durumunda bile UI'yi göster, kullanıcı manuel oluşturabilir
+        }
+        hasCheckedBusinesses = true
     }
 }
 
@@ -328,7 +350,11 @@ struct BusinessView: View {
         }
         .onAppear {
             Task {
-                await businessService.checkUserHasBusiness()
+                do {
+                    _ = try await businessService.getUserBusinesses()
+                } catch {
+                    print("Hata: \(error)")
+                }
             }
         }
     }

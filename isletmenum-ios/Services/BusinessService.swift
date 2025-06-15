@@ -21,7 +21,7 @@ class BusinessService: ObservableObject {
     
     func createBusiness(name: String, description: String, type: String, logoImage: UIImage?) async throws -> CreateBusinessResponse {
         guard let token = AuthService.shared.token else {
-            throw URLError(.userAuthenticationRequired)
+            throw AuthError.unauthorized
         }
         
         guard let url = URL(string: "\(baseURL)/business/create") else {
@@ -65,21 +65,30 @@ class BusinessService: ObservableObject {
         
         request.httpBody = body
         
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(CreateBusinessResponse.self, from: data)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        // 401 Unauthorized kontrolü
+        if let httpResponse = response as? HTTPURLResponse {
+            if httpResponse.statusCode == 401 {
+                AuthService.shared.handleUnauthorized()
+                throw AuthError.unauthorized
+            }
+        }
+        
+        let apiResponse = try JSONDecoder().decode(CreateBusinessResponse.self, from: data)
         
         // Başarılı oluşturma sonrası listeyi güncelle
         await MainActor.run {
-            self.userBusinesses.append(response.business)
+            self.userBusinesses.append(apiResponse.business)
             self.hasActiveBusiness = true
         }
         
-        return response
+        return apiResponse
     }
     
     func getAllBusinesses() async throws -> [Business] {
         guard let token = AuthService.shared.token else {
-            throw URLError(.userAuthenticationRequired)
+            throw AuthError.unauthorized
         }
         
         guard let url = URL(string: "\(baseURL)/business/all") else {
@@ -89,19 +98,28 @@ class BusinessService: ObservableObject {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(AllBusinessesResponse.self, from: data)
+        let (data, response) = try await URLSession.shared.data(for: request)
         
-        await MainActor.run {
-            self.allBusinesses = response.businesses
+        // 401 Unauthorized kontrolü
+        if let httpResponse = response as? HTTPURLResponse {
+            if httpResponse.statusCode == 401 {
+                AuthService.shared.handleUnauthorized()
+                throw AuthError.unauthorized
+            }
         }
         
-        return response.businesses
+        let apiResponse = try JSONDecoder().decode(AllBusinessesResponse.self, from: data)
+        
+        await MainActor.run {
+            self.allBusinesses = apiResponse.businesses
+        }
+        
+        return apiResponse.businesses
     }
     
     func getUserBusinesses() async throws -> [Business] {
         guard let token = AuthService.shared.token else {
-            throw URLError(.userAuthenticationRequired)
+            throw AuthError.unauthorized
         }
         
         guard let url = URL(string: "\(baseURL)/api/business/user") else {
@@ -111,15 +129,24 @@ class BusinessService: ObservableObject {
         var request = URLRequest(url: url)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
-        let (data, _) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(AllBusinessesResponse.self, from: data)
+        let (data, response) = try await URLSession.shared.data(for: request)
         
-        await MainActor.run {
-            self.userBusinesses = response.businesses
-            self.hasActiveBusiness = !response.businesses.isEmpty
+        // 401 Unauthorized kontrolü
+        if let httpResponse = response as? HTTPURLResponse {
+            if httpResponse.statusCode == 401 {
+                AuthService.shared.handleUnauthorized()
+                throw AuthError.unauthorized
+            }
         }
         
-        return response.businesses
+        let apiResponse = try JSONDecoder().decode(AllBusinessesResponse.self, from: data)
+        
+        await MainActor.run {
+            self.userBusinesses = apiResponse.businesses
+            self.hasActiveBusiness = !apiResponse.businesses.isEmpty
+        }
+        
+        return apiResponse.businesses
     }
     
     func checkUserHasBusiness() async {
