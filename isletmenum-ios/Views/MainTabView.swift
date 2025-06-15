@@ -54,20 +54,228 @@ struct MainTabView: View {
 
 // Geçici placeholder view'lar
 struct HomeView: View {
+    @StateObject private var businessService = BusinessService.shared
+    @State private var isLoading = false
+    @State private var searchText = ""
+    
+    var filteredBusinesses: [Business] {
+        if searchText.isEmpty {
+            return businessService.allBusinesses
+        } else {
+            return businessService.allBusinesses.filter {
+                $0.name.localizedCaseInsensitiveContains(searchText) ||
+                $0.type.localizedCaseInsensitiveContains(searchText) ||
+                $0.description.localizedCaseInsensitiveContains(searchText)
+            }
+        }
+    }
+    
     var body: some View {
         NavigationView {
-            VStack {
-                Image(systemName: "house.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(.blue)
-                Text("Ana Sayfa")
-                    .font(.title)
+            VStack(spacing: 0) {
+                // Header
+                VStack(spacing: 16) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Merhaba! 👋")
+                                .font(.headline)
+                                .foregroundColor(.secondary)
+                            
+                            Text("İşletmeleri Keşfedin")
+                                .font(.largeTitle)
+                                .fontWeight(.bold)
+                        }
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            Task {
+                                await loadBusinesses()
+                            }
+                        }) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.title2)
+                                .foregroundColor(.blue)
+                        }
+                        .disabled(isLoading)
+                    }
+                    
+                    // Search Bar
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                        
+                        TextField("İşletme ara...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                    }
+                    .padding(12)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(12)
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+                .padding(.bottom, 20)
+                .background(Color(UIColor.systemBackground))
+                
+                // Content
+                if isLoading {
+                    Spacer()
+                    VStack(spacing: 16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+                        Text("Yükleniyor...")
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                } else if filteredBusinesses.isEmpty {
+                    Spacer()
+                    VStack(spacing: 20) {
+                        Image(systemName: searchText.isEmpty ? "building.2" : "magnifyingglass")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        
+                        Text(searchText.isEmpty ? "Henüz İşletme Yok" : "Sonuç Bulunamadı")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text(searchText.isEmpty ? "İşletmeler henüz eklenmemiş." : "Aramayı değiştirip tekrar deneyin.")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                     .padding()
-                Text("Bu sayfa henüz hazırlanıyor...")
-                    .foregroundColor(.secondary)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredBusinesses, id: \.id) { business in
+                                BusinessCardView(business: business)
+                                    .padding(.horizontal, 20)
+                            }
+                        }
+                        .padding(.top, 8)
+                        .padding(.bottom, 20)
+                    }
+                }
             }
-            .navigationTitle("Ana Sayfa")
+            .navigationBarHidden(true)
+            .refreshable {
+                await loadBusinesses()
+            }
         }
+        .onAppear {
+            Task {
+                await loadBusinesses()
+            }
+        }
+    }
+    
+    private func loadBusinesses() async {
+        isLoading = true
+        do {
+            _ = try await businessService.getAllBusinesses()
+        } catch {
+            print("Hata: \(error)")
+        }
+        isLoading = false
+    }
+}
+
+struct BusinessCardView: View {
+    let business: Business
+    
+    // Random emoji array for logos
+    private let businessEmojis = ["🍔", "🍕", "☕️", "🍟", "🍝", "🍜", "🍳", "🍰", "🍺", "🍎", "🎉", "💼", "✏️", "📚", "🚗", "🏠", "💕", "🎵", "🎯", "⚽️"]
+    
+    private var randomEmoji: String {
+        let index = abs((business.name + business.type).hashValue) % businessEmojis.count
+        return businessEmojis[index]
+    }
+    
+    var body: some View {
+        Button(action: {
+            // TODO: İşletme detay sayfasına git
+        }) {
+            HStack(spacing: 16) {
+                // Logo
+                if let logoPath = business.logo, !logoPath.isEmpty {
+                    AsyncImage(url: URL(string: "https://api.isletmenum.com\(logoPath)")) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        Text(randomEmoji)
+                            .font(.system(size: 32))
+                    }
+                    .frame(width: 70, height: 70)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color.gray.opacity(0.1))
+                    )
+                } else {
+                    Text(randomEmoji)
+                        .font(.system(size: 32))
+                        .frame(width: 70, height: 70)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16)
+                                .fill(Color.blue.opacity(0.1))
+                        )
+                }
+                
+                // İçerik
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(business.name)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        
+                        Spacer()
+                        
+                        Text(business.type)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.blue)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color.blue.opacity(0.1))
+                            )
+                    }
+                    
+                    Text(business.description)
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    
+                    HStack {
+                        Label("Aktif", systemImage: "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                        
+                        Spacer()
+                        
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                }
+            }
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(UIColor.secondarySystemBackground))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(PlainButtonStyle())
+        .scaleEffect(1.0)
+        .animation(.easeInOut(duration: 0.1), value: false)
     }
 }
 

@@ -14,6 +14,7 @@ struct Business: Codable {
     let type: String
     let logo: String?
     let userId: Int?
+    let UserId: Int? // API response'da bu field var
     let createdAt: String?
     let updatedAt: String?
 }
@@ -30,6 +31,7 @@ struct CreateBusinessResponse: Codable {
     let business: Business
 }
 
-struct BusinessListResponse: Codable {
+struct AllBusinessesResponse: Codable {
+    let message: String
     let businesses: [Business]
 }

@@ -57,6 +57,7 @@ class AuthService: ObservableObject {
         
         // İşletme servisini de sıfırla
         BusinessService.shared.userBusinesses = []
+        BusinessService.shared.allBusinesses = []
         BusinessService.shared.hasActiveBusiness = false
     }
     

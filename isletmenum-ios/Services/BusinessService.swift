@@ -12,6 +12,7 @@ class BusinessService: ObservableObject {
     static let shared = BusinessService()
     
     @Published var userBusinesses: [Business] = []
+    @Published var allBusinesses: [Business] = []
     @Published var hasActiveBusiness = false
     
     private let baseURL = "https://api.isletmenum.com"
@@ -76,6 +77,28 @@ class BusinessService: ObservableObject {
         return response
     }
     
+    func getAllBusinesses() async throws -> [Business] {
+        guard let token = AuthService.shared.token else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        
+        guard let url = URL(string: "\(baseURL)/business/all") else {
+            throw URLError(.badURL)
+        }
+        
+        var request = URLRequest(url: url)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (data, _) = try await URLSession.shared.data(for: request)
+        let response = try JSONDecoder().decode(AllBusinessesResponse.self, from: data)
+        
+        await MainActor.run {
+            self.allBusinesses = response.businesses
+        }
+        
+        return response.businesses
+    }
+    
     func getUserBusinesses() async throws -> [Business] {
         guard let token = AuthService.shared.token else {
             throw URLError(.userAuthenticationRequired)
@@ -89,7 +112,7 @@ class BusinessService: ObservableObject {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         
         let (data, _) = try await URLSession.shared.data(for: request)
-        let response = try JSONDecoder().decode(BusinessListResponse.self, from: data)
+        let response = try JSONDecoder().decode(AllBusinessesResponse.self, from: data)
         
         await MainActor.run {
             self.userBusinesses = response.businesses
