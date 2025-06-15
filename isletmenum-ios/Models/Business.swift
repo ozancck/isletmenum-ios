@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Business: Codable, Identifiable, Equatable, Hashable {
+struct Business: Codable {
     let id: Int?
     let name: String
     let description: String
@@ -17,16 +17,6 @@ struct Business: Codable, Identifiable, Equatable, Hashable {
     let UserId: Int? // API response'da bu field var
     let createdAt: String?
     let updatedAt: String?
-    
-    // Equatable için
-    static func == (lhs: Business, rhs: Business) -> Bool {
-        return lhs.id == rhs.id
-    }
-    
-    // Hashable için
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
-    }
 }
 
 struct CreateBusinessRequest: Codable {

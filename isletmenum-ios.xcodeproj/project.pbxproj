@@ -399,11 +399,15 @@
 				DEVELOPMENT_TEAM = LD92982N8X;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSCameraUsageDescription = "İşletme logosu çekmek için kameraya erişim gerekiyor.";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "İşletme logosu seçmek için fotoğraf galerisine erişim gerekiyor.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_NSCameraUsageDescription = "İşletme logosu çekmek için kameraya erişim gerekiyor.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "İşletme logosu seçmek için fotoğraf galerisine erişim gerekiyor.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "İşletme logosu çekmek için kameraya erişim gerekiyor.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "İşletme logosu seçmek için fotoğraf galerisine erişim gerekiyor.";
+				INFOPLIST_KEY_NSCameraUsageDescription = "İşletme logosu çekmek için kameraya erişim gerekiyor.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "İşletme logosu seçmek için fotoğraf galerisine erişim gerekiyor.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (

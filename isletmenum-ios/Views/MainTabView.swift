@@ -32,8 +32,8 @@ struct MainTabView: View {
             
             BusinessView()
                 .tabItem {
-                    Image(systemName: "list.bullet.rectangle")
-                    Text("Menü")
+                    Image(systemName: "building.2.fill")
+                    Text("İşletmeler")
                 }
             
             ProfileView()
@@ -302,8 +302,61 @@ struct BusinessCardView: View {
 }
 
 struct BusinessView: View {
+    @StateObject private var businessService = BusinessService.shared
+    @State private var showCreateBusiness = false
+    
     var body: some View {
-        MenuManagementView()
+        NavigationView {
+            VStack {
+                if businessService.userBusinesses.isEmpty {
+                    // Boş durum
+                    VStack(spacing: 20) {
+                        Image(systemName: "building.2")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        
+                        Text("Henüz İşletmeniz Yok")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text("İlk işletmenizi oluşturun ve müşterilerinize ulaşın")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button("İşletme Oluştur") {
+                            showCreateBusiness = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                    .padding()
+                } else {
+                    // İşletme listesi
+                    List(businessService.userBusinesses, id: \.id) { business in
+                        BusinessRowView(business: business)
+                    }
+                }
+            }
+            .navigationTitle("İşletmelerim")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Ekle") {
+                        showCreateBusiness = true
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showCreateBusiness) {
+            CreateBusinessView()
+        }
+        .onAppear {
+            Task {
+                do {
+                    _ = try await businessService.getUserBusinesses()
+                } catch {
+                    print("Hata: \(error)")
+                }
+            }
+        }
     }
 }
 
