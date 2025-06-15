@@ -8,8 +8,13 @@
 import SwiftUI
 
 struct MainTabView: View {
+    @StateObject private var businessService = BusinessService.shared
+    @State private var showCreateBusiness = false
+    
     var body: some View {
-        TabView {
+        Group {
+            if businessService.hasActiveBusiness {
+                TabView {
             HomeView()
                 .tabItem {
                     Image(systemName: "house.fill")
@@ -33,8 +38,17 @@ struct MainTabView: View {
                     Image(systemName: "gearshape.fill")
                     Text("Ayarlar")
                 }
+                }
+                .accentColor(.blue)
+            } else {
+                CreateBusinessView()
+            }
         }
-        .accentColor(.blue)
+        .onAppear {
+            Task {
+                await businessService.checkUserHasBusiness()
+            }
+        }
     }
 }
 
@@ -58,20 +72,95 @@ struct HomeView: View {
 }
 
 struct BusinessView: View {
+    @StateObject private var businessService = BusinessService.shared
+    @State private var showCreateBusiness = false
+    
     var body: some View {
         NavigationView {
             VStack {
-                Image(systemName: "building.2.fill")
-                    .font(.system(size: 60))
-                    .foregroundColor(.blue)
-                Text("İşletmeler")
-                    .font(.title)
+                if businessService.userBusinesses.isEmpty {
+                    // Boş durum
+                    VStack(spacing: 20) {
+                        Image(systemName: "building.2")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                        
+                        Text("Henüz İşletmeniz Yok")
+                            .font(.title2)
+                            .fontWeight(.semibold)
+                        
+                        Text("İlk işletmenizi oluşturun ve müşterilerinize ulaşın")
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button("İşletme Oluştur") {
+                            showCreateBusiness = true
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
                     .padding()
-                Text("Bu sayfa henüz hazırlanıyor...")
-                    .foregroundColor(.secondary)
+                } else {
+                    // İşletme listesi
+                    List(businessService.userBusinesses, id: \.id) { business in
+                        BusinessRowView(business: business)
+                    }
+                }
             }
-            .navigationTitle("İşletmeler")
+            .navigationTitle("İşletmelerim")
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Ekle") {
+                        showCreateBusiness = true
+                    }
+                }
+            }
         }
+        .sheet(isPresented: $showCreateBusiness) {
+            CreateBusinessView()
+        }
+        .onAppear {
+            Task {
+                await businessService.checkUserHasBusiness()
+            }
+        }
+    }
+}
+
+struct BusinessRowView: View {
+    let business: Business
+    
+    var body: some View {
+        HStack(spacing: 12) {
+            // Logo placeholder
+            RoundedRectangle(cornerRadius: 8)
+                .fill(Color.blue.opacity(0.1))
+                .frame(width: 50, height: 50)
+                .overlay(
+                    Image(systemName: "building.2")
+                        .foregroundColor(.blue)
+                )
+            
+            VStack(alignment: .leading, spacing: 4) {
+                Text(business.name)
+                    .font(.headline)
+                
+                Text(business.type)
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+                
+                Text(business.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+            
+            Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.gray)
+                .font(.caption)
+        }
+        .padding(.vertical, 4)
     }
 }
 

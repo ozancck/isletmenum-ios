@@ -54,6 +54,10 @@ class AuthService: ObservableObject {
         currentUser = nil
         isAuthenticated = false
         UserDefaults.standard.removeObject(forKey: "auth_token")
+        
+        // İşletme servisini de sıfırla
+        BusinessService.shared.userBusinesses = []
+        BusinessService.shared.hasActiveBusiness = false
     }
     
     private func loadToken() {
